@@ -1,0 +1,16 @@
+{
+  "name": "@justiniano/ui",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.jsx",
+  "exports": {
+    ".": "./src/index.jsx",
+    "./assets/*": "./assets/*",
+    "./styles/*": "./styles/*"
+  },
+  "peerDependencies": {
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0"
+  }
+}

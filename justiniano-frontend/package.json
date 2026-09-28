@@ -1,0 +1,19 @@
+{
+  "name": "justiniano-frontend",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Frontend Justiniano — 3 SPAs React (cliente, abogado, admin) sobre Azure Static Web Apps",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "dev:cliente": "npm run dev -w @justiniano/cliente",
+    "dev:abogado": "npm run dev -w @justiniano/abogado",
+    "dev:admin": "npm run dev -w @justiniano/admin",
+    "build": "npm run build -w @justiniano/cliente && npm run build -w @justiniano/abogado && npm run build -w @justiniano/admin",
+    "build:cliente": "npm run build -w @justiniano/cliente",
+    "build:abogado": "npm run build -w @justiniano/abogado",
+    "build:admin": "npm run build -w @justiniano/admin"
+  }
+}
