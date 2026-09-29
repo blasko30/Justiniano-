@@ -76,9 +76,8 @@ export default function DocView() {
       const r = await api.documents.download(id, { format: dlFmt, warning_acknowledged: true });
       if (r?.download_url) {
         const a = document.createElement("a");
-        a.href = r.download_url;
-        a.rel = "noopener";
-        a.target = "_blank";
+        a.download = `${d?.name || "documento"}.html`;
+        a.download = `${doc?.name || "documento"}.${dlFmt}`;
         a.click();
       }
       setDlOpen(false);

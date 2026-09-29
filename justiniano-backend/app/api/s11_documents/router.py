@@ -317,15 +317,16 @@ async def download_document(document_id: str, body: DocumentDownloadIn, request:
     await db.commit()
     expires_at = utcnow() + timedelta(seconds=settings.sas_ttl_seconds)
     if get_settings().fake_integrations:
+        from fastapi.responses import HTMLResponse
+        full_html = f"""<!DOCTYPE html>
+<html><head><meta charset="utf-8">
+<title>{doc.name}</title>
+<style>body{{font-family:Arial,sans-serif;max-width:800px;margin:40px auto;padding:20px;line-height:1.6}}</style>
+</head><body>{doc.content_html or ''}</body></html>"""
         import base64
-        b64 = base64.b64encode(content).decode()
-        mime = {"odt": "application/vnd.oasis.opendocument.text",
-                "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                "pdf": "application/pdf"}.get(body.format, "text/html")
-        data_url = f"data:{mime};base64,{b64}"
-        return {"download_url": data_url, "format": body.format, "expires_at": expires_at}
-    return {"download_url": blob_client().sas_url(blob_path),
-            "format": body.format, "expires_at": expires_at}
+        b64 = base64.b64encode(full_html.encode("utf-8")).decode()
+        data_url = f"data:text/html;base64,{b64}"
+        return {"download_url": data_url, "format": "html", "expires_at": expires_at}
 
 
 @router.delete("/documents/{document_id}/disclaimer", status_code=204)
