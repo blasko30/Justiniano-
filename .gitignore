@@ -1,0 +1,51 @@
+# Environment and secrets
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+
+# Secret material and keys
+keys/
+**/keys/
+*.pem
+*.key
+*.crt
+*.cer
+*.p12
+*.pfx
+*.p8
+*.jks
+*.pub
+
+# Local database / runtime data
+*.db
+*.sqlite
+*.sqlite3
+justiniano_dev.db
+**/justiniano_dev.db
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Node / frontend
+node_modules/
+**/node_modules/
+dist/
+**/dist/
+build/
+**/build/
+coverage/
+.vite/
+**/.vite/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
