@@ -23,7 +23,7 @@ from app.api.s20_lawyers.router import router as lawyers_router
 from app.api.s21_admin_reviewers.router import router as admin_reviewers_router
 
 settings = get_settings()
-print("DEBUG: settings.database_url=", settings.database_url)
+
 app = FastAPI(title=settings.app_name, version="2.3",
               description="API REST de Justiniano (especificación v2.3).")
 
