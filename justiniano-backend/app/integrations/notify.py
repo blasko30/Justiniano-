@@ -1,9 +1,38 @@
-"""Email y SMS — Azure Communication Services (§1.1). Simulador registra en log."""
+"""Email y SMS — Azure Communication Services o Resend (§1.1).
+Simulador registra en log cuando no hay credenciales reales.
+"""
 import logging
+
+import httpx
 
 from app.core.config import get_settings
 
 log = logging.getLogger("justiniano.notify")
+
+
+class _ResendEmail:  # pragma: no cover - requiere credenciales
+    def __init__(self):
+        s = get_settings()
+        self._api_key = s.resend_api_key
+        self._from = s.resend_from_email or s.email_sender
+
+    def send_email(self, to: str, subject: str, body: str) -> None:
+        if not self._api_key:
+            raise RuntimeError("RESEND_API_KEY no configurado.")
+        response = httpx.post(
+            "https://api.resend.com/emails",
+            headers={"Authorization": f"Bearer {self._api_key}",
+                     "Content-Type": "application/json"},
+            json={"from": self._from,
+                  "to": [to],
+                  "subject": subject,
+                  "text": body},
+            timeout=15,
+        )
+        response.raise_for_status()
+
+    def send_sms(self, to: str, body: str) -> None:
+        raise NotImplementedError("SMS no se entrega por Resend; usar ACS o simulador.")
 
 
 class _ACS:  # pragma: no cover - requiere credenciales
@@ -43,5 +72,12 @@ def notifier():
     global _client
     if _client is None:
         s = get_settings()
-        _client = _FakeNotify() if (s.fake_integrations or not s.acs_connection_string) else _ACS()
+        if s.fake_integrations:
+            _client = _FakeNotify()
+        elif s.acs_connection_string:
+            _client = _ACS()
+        elif s.resend_api_key:
+            _client = _ResendEmail()
+        else:
+            _client = _FakeNotify()
     return _client

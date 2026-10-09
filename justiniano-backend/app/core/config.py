@@ -43,6 +43,8 @@ class Settings(BaseSettings):
 
     acs_connection_string: str = ""                 # Azure Communication Services
     email_sender: str = "no-reply@justiniano.cl"
+    resend_api_key: str = ""                         # Resend API key; si está presente se usa para email
+    resend_from_email: str = "no-reply@justiniano.cl"
 
     key_vault_url: str = ""                         # opcional: claves JWT desde Key Vault
 
