@@ -197,7 +197,7 @@ async def create_document(body: DocumentCreateIn, request: Request,
         raise ApiError(422, "missing_required_fields",
                        "Hay campos obligatorios sin completar.", {"fields": missing})
 
-    content_html = ai_client().generate_document(fmt.template_body or "", body.fields)
+    content_html = await ai_client().generate_document(fmt.template_body or "", body.fields)
     now = utcnow()
     doc = Document(id=new_id("doc"), user_id=user.id, format_id=fmt.id,
                    consultation_id=body.consultation_id,
@@ -274,7 +274,7 @@ async def patch_document_fields(document_id: str, body: DocumentFieldsPatchIn,
     doc.fields = merged
     doc.missing_fields = missing
     doc.status = "pending" if missing else "draft"
-    doc.content_html = ai_client().generate_document((fmt.template_body or "") if fmt else "", merged)
+    doc.content_html = await ai_client().generate_document((fmt.template_body or "") if fmt else "", merged)
     await db.commit()
 
     completed, ftotal = _completion(merged, declared)

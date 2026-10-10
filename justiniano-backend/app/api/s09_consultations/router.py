@@ -259,8 +259,8 @@ async def send_message(consultation_id: str, body: MessageCreateIn,
     history.append({"role": "user", "content": user_prompt})
 
     try:
-        result = ai_client().chat(agent_name, agent.legal_basis if agent else None,
-                                  user.company or "", history)
+        result = await ai_client().chat(agent_name, agent.legal_basis if agent else None,
+                                        user.company or "", history)
     except Exception:
         raise ApiError(503, "ai_unavailable", "El servicio de IA no está disponible; reintente.")
 

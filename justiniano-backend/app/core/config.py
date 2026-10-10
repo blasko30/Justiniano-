@@ -40,6 +40,9 @@ class Settings(BaseSettings):
     azure_openai_endpoint: str = ""
     azure_openai_api_key: str = ""
     azure_openai_deployment: str = "gpt-4o"
+    nvidia_api_key: str = ""
+    nvidia_base_url: str = "https://integrate.api.nvidia.com/v1"
+    nvidia_model: str = "deepseek-ai/deepseek-r1"
 
     acs_connection_string: str = ""                 # Azure Communication Services
     email_sender: str = "no-reply@justiniano.cl"
