@@ -1,8 +1,13 @@
 """§9 Consultas — chat con agentes IA: listado, hilo, mensajes y exportación."""
+import asyncio
 import html as html_mod
+import logging
 from datetime import timedelta
+from pathlib import Path
 
 from fastapi import APIRouter, Depends
+from fastapi.responses import FileResponse
+from openai import APITimeoutError
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -15,6 +20,11 @@ from app.core.ratelimit import limit
 from app.core.security import check_id, new_id, utcnow
 from app.integrations.ai import ai_client
 from app.integrations.blob import blob_client
+from app.integrations.legal_knowledge import (
+    LegalKnowledgeUnavailable,
+    resolve_source,
+    retrieve_sources,
+)
 from app.models import (Agent, Attachment, Consultation, Message, Plan, PlanVersion,
                         Subscription, User)
 
@@ -25,6 +35,7 @@ router = APIRouter(tags=["§9 Consultas"])
 
 DISCLAIMER = "Orientación generada por IA · Verifique antes de actuar"
 FREE_PLAN_ID = "p_free"
+logger = logging.getLogger(__name__)
 
 
 # ── Helpers de plan y cuotas (§4) ────────────────────────────────────────
@@ -258,12 +269,33 @@ async def send_message(consultation_id: str, body: MessageCreateIn,
         user_prompt += "\n\n[Adjuntos del usuario: " + ", ".join(a.name for a in attachments) + "]"
     history.append({"role": "user", "content": user_prompt})
 
+    sources = []
+    knowledge_context = ""
     try:
+        if agent:
+            knowledge_context, sources = await asyncio.to_thread(
+                retrieve_sources, agent.id, body.content
+            )
         result = await ai_client().chat(agent_name, agent.legal_basis if agent else None,
-                                        user.company or "", history)
-    except Exception:
+                                        user.company or "", history, knowledge_context)
+    except LegalKnowledgeUnavailable as exc:
+        raise ApiError(503, "legal_knowledge_unavailable",
+                       "La biblioteca legal de este agente no está disponible.", {"reason": str(exc)})
+    except APITimeoutError:
+        logger.warning("Consultation AI request timed out after the configured provider deadline")
+        raise ApiError(504, "ai_timeout",
+                       "El proveedor de IA está tardando demasiado en responder. Inténtelo nuevamente.")
+    except Exception as exc:
+        logger.error(
+            "Consultation AI request failed (type=%s, provider_status=%s, provider_code=%s)",
+            type(exc).__name__,
+            getattr(exc, "status_code", None),
+            getattr(exc, "code", None),
+        )
         raise ApiError(503, "ai_unavailable", "El servicio de IA no está disponible; reintente.")
 
+    legal_basis = list(result.get("legal_basis") or [])
+    legal_basis.extend(sources)
     now = utcnow()
     user_msg = Message(id=new_id("msg"), consultation_id=cons.id, role="user",
                        content=body.content, created_at=now)
@@ -273,7 +305,7 @@ async def send_message(consultation_id: str, body: MessageCreateIn,
         att.message_id = user_msg.id
     assistant_msg = Message(id=new_id("msg"), consultation_id=cons.id, role="assistant",
                             content=result.get("content", ""),
-                            legal_basis=result.get("legal_basis") or [],
+                            legal_basis=legal_basis,
                             suggestions=result.get("suggestions") or [],
                             suggested_format_id=result.get("suggested_format_id"),
                             created_at=now)
@@ -298,6 +330,16 @@ async def send_message(consultation_id: str, body: MessageCreateIn,
             "consultation_title": cons.title,
             "interactions_used": cons.interactions_used,
             "interactions_limit": il}
+
+
+@router.get("/legal-sources/{source_id}")
+async def download_legal_source(source_id: str,
+                                user: User = Depends(get_current_user)) -> FileResponse:
+    """Descarga autenticada del documento legal citado por una respuesta."""
+    path = resolve_source(source_id)
+    if path is None or not path.is_file():
+        raise not_found("Fuente legal inexistente.")
+    return FileResponse(path, filename=Path(path).name)
 
 
 @router.post("/consultations/{consultation_id}/export")

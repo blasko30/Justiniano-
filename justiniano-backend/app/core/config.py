@@ -37,12 +37,16 @@ class Settings(BaseSettings):
     blob_local_dir: str = "/tmp/justiniano-blobs"   # respaldo del simulador
     sas_ttl_seconds: int = 900                      # 15 min (§1.1)
 
+    legal_documents_dir: str = "../documentos"
+    legal_index_cache_dir: str = ".legal-index-cache"
+
     azure_openai_endpoint: str = ""
     azure_openai_api_key: str = ""
     azure_openai_deployment: str = "gpt-4o"
     nvidia_api_key: str = ""
     nvidia_base_url: str = "https://integrate.api.nvidia.com/v1"
-    nvidia_model: str = "deepseek-ai/deepseek-r1"
+    nvidia_model: str = "meta/llama-3.2-11b-vision-instruct"
+    ai_request_timeout_seconds: float = 45
 
     acs_connection_string: str = ""                 # Azure Communication Services
     email_sender: str = "no-reply@justiniano.cl"

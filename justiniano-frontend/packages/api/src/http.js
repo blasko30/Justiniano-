@@ -80,7 +80,9 @@ export function createHttp({ baseUrl, storagePrefix = "jus", onAuthLost } = {}) 
     return s ? `?${s}` : "";
   }
 
-  async function request(method, path, { body, params, auth = true, formData, retry = true, blob = false } = {}) {
+  async function request(method, path, {
+    body, params, auth = true, formData, retry = true, blob = false, signal,
+  } = {}) {
     const headers = {};
     let payload;
     if (formData) {
@@ -95,12 +97,13 @@ export function createHttp({ baseUrl, storagePrefix = "jus", onAuthLost } = {}) 
       method,
       headers,
       body: payload,
+      signal,
     });
 
     if (res.status === 401 && auth && retry && tokens.refresh) {
       refreshing = refreshing || doRefresh().finally(() => { refreshing = null; });
       await refreshing;
-      return request(method, path, { body, params, auth, formData, retry: false, blob });
+      return request(method, path, { body, params, auth, formData, retry: false, blob, signal });
     }
 
     if (!res.ok) throw new ApiError(res.status, await safeJson(res));

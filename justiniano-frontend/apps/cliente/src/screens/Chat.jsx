@@ -143,10 +143,15 @@ export default function Chat() {
     setAttach([]);
     setSending(true);
     scrollDown();
+    const requestController = new AbortController();
+    const requestTimeout = setTimeout(() => requestController.abort(), 65000);
     try {
       const body = { content };
       if (attachIds.length) body.attachment_ids = attachIds;
-      const r = await api.http.post(`/consultations/${id}/messages`, { body });
+      const r = await api.http.post(`/consultations/${id}/messages`, {
+        body,
+        signal: requestController.signal,
+      });
       setCons((c) => c && {
         ...c,
         title: r.consultation_title ?? c.title,
@@ -171,8 +176,12 @@ export default function Chat() {
       setText(content);
       setSending(false);
       if (errCode(e) === "interaction_limit_reached") { setLocked(true); toast("Límite de interacciones alcanzado", "warn"); }
+      else if (e.name === "AbortError") toast("La consulta tardó demasiado. Verifique el servicio de IA e inténtelo de nuevo.", "err");
+      else if (e.status === 504) toast(errMsg(e), "err");
       else if (e.status === 503) toast("El servicio de IA no está disponible; reintente.", "err");
       else toast(errMsg(e), "err");
+    } finally {
+      clearTimeout(requestTimeout);
     }
   };
 
@@ -183,6 +192,22 @@ export default function Chat() {
         window.open(r.download_url, "_blank", "noopener");
         toast("Exportación lista", "ok");
       }
+    } catch (e) {
+      toast(errMsg(e), "err");
+    }
+  };
+
+  const openLegalSource = async (source) => {
+    try {
+      const blob = await api.http.get(source.url, { blob: true });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = source.title.split(" · ")[0];
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
     } catch (e) {
       toast(errMsg(e), "err");
     }
@@ -257,7 +282,20 @@ export default function Chat() {
                 <div className="bub">
                   <MsgBody content={m.content} />
                   {m.legal_basis?.length ? (
-                    <div className="cite"><b>Fundamento:</b> {m.legal_basis.map(b => typeof b === "string" ? b : (b.article || b.text || b.title || b.description || JSON.stringify(b))).join(" • ")}</div>
+                    <div className="cite">
+                      <b>Fundamento:</b>
+                      {m.legal_basis.filter((b) => !b?.source_id).map((b) =>
+                        typeof b === "string" ? b : (b.article || b.text || b.title || b.description || JSON.stringify(b))
+                      ).join(" • ")}
+                      {m.legal_basis.filter((b) => b?.source_id).map((source) => (
+                        <div className="legal-source" key={source.source_id}>
+                          <button className="legal-source-link" onClick={() => openLegalSource(source)}>
+                            📄 {source.title}{source.page ? ` · pág. ${source.page}` : ""}
+                          </button>
+                          <div>{source.excerpt}</div>
+                        </div>
+                      ))}
+                    </div>
                   ) : null}
                   {m.disclaimer ? (
                     <div className="aidisc"><span>⚠️</span><span>{m.disclaimer}</span></div>

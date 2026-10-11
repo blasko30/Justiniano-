@@ -40,7 +40,34 @@ una revisión en bolsa y una revisión en curso — coherentes con los tres wire
 firmada de 15 min, Stripe de prueba, agente IA con respuesta simulada y notificaciones a log. Con
 `FAKE_INTEGRATIONS=false` y las credenciales del `.env`, cada cliente usa el SDK real (Stripe Checkout/
 Webhooks, Azure Blob + SAS, Azure OpenAI, Azure Communication Services, Key Vault para claves JWT).
-La interfaz es idéntica: no cambia ninguna línea de los routers.
+La interfaz es idéntica: no cambia ninguna línea de los routers. Con simuladores desactivados y sin
+credenciales de proveedor IA, las consultas fallan explícitamente en vez de devolver una respuesta simulada.
+
+## Biblioteca legal de los cuatro agentes
+
+Los documentos de referencia se guardan en `../documentos/`, en las carpetas de
+Civil (`civ`), Societario (`soc`), Propiedad Intelectual (`pi`) y Protección de
+Datos (`pd`). Al recibir una pregunta, el backend extrae texto de los PDF, CSV y
+archivos de texto/XML incluidos en ZIP, busca pasajes coincidentes y los añade
+al contexto del agente. Cada respuesta muestra los pasajes recuperados y permite
+descargar el archivo original citado. Las otras áreas no reciben documentos de
+esta biblioteca. Los PDF escaneados sin capa de texto no se pueden indexar por
+ahora; se requiere OCR para habilitarlos.
+
+Se requiere conexión saliente al proveedor de IA configurado para generar
+respuestas. En desarrollo, `FAKE_INTEGRATIONS=true` simula la respuesta y muestra
+los pasajes recuperados para probar el flujo sin credenciales. El índice se
+construye durante la imagen Docker para evitar retrasar la primera consulta; en
+desarrollo local se genera de forma perezosa por agente y se actualiza cuando
+cambian los archivos.
+Si el directorio configurado no existe o no se pueden extraer textos, el backend
+devuelve un error explícito en vez de fingir que consultó las fuentes.
+
+Docker Compose construye desde la raíz del repositorio para incluir también
+`documentos/`. En despliegues que no usen este Dockerfile, copie esa carpeta junto
+al backend y configure `LEGAL_DOCUMENTS_DIR` con su ruta en el contenedor.
+Para preparar el índice fuera de Docker, desde `justiniano-backend/` ejecute
+`python -c "from app.integrations.legal_knowledge import build_all_indexes; build_all_indexes()"`.
 
 ## Estructura (carpetas = secciones del documento)
 

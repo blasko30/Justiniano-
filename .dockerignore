@@ -1,0 +1,14 @@
+.git
+.venv
+**/.venv
+**/__pycache__
+**/.pytest_cache
+**/.legal-index-cache
+**/node_modules
+**/dist
+**/build
+**/.vite
+**/.env
+**/justiniano_dev.db
+justiniano-frontend
+install.log
